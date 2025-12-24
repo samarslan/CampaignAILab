@@ -14,5 +14,7 @@ namespace CampaignAILab.Decisions
         public string TargetId;
 
         public DecisionContextSnapshot Context;
+
+        public bool IsLogged;
     }
 }

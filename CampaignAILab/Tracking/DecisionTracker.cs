@@ -49,9 +49,12 @@ namespace CampaignAILab.Tracking
             {
                 AbortDecisionIfExists(party);
 
+                inferredDecision.IsLogged = true;
                 ActiveDecisions[partyId] = inferredDecision;
+
                 AsyncLogger.EnqueueDecision(inferredDecision);
             }
+
 
             LastObservations[partyId] = current;
         }
@@ -68,11 +71,6 @@ namespace CampaignAILab.Tracking
             if (!prev.InArmy && curr.InArmy && party.Army != null)
             {
                 return CreateDecision(party, "JoinArmy", party.Army.LeaderParty?.StringId);
-            }
-
-            if (prev.InArmy && !curr.InArmy)
-            {
-                return CreateDecision(party, "LeaveArmy", null);
             }
 
             // 2️⃣ Movement target change (strong commitment)
@@ -131,15 +129,23 @@ namespace CampaignAILab.Tracking
             if (!ActiveDecisions.TryGetValue(party.StringId, out var decision))
                 return;
 
-            AsyncLogger.EnqueueOutcome(new OutcomeRecord
+            if (decision.IsLogged)
             {
-                DecisionId = decision.DecisionId,
-                OutcomeType = "Aborted",
-                ResolutionTime = CampaignTime.Now
-            });
+                float durationHours =
+                    (float)(CampaignTime.Now.ToHours - decision.Timestamp.ToHours);
+
+                AsyncLogger.EnqueueOutcome(new OutcomeRecord
+                {
+                    DecisionId = decision.DecisionId,
+                    OutcomeType = "Aborted",
+                    ResolutionTime = CampaignTime.Now,
+                    DurationHours = durationHours
+                });
+            }
 
             ActiveDecisions.Remove(party.StringId);
         }
+
 
         public static DecisionRecord GetActive(string partyId)
             => ActiveDecisions.TryGetValue(partyId, out var d) ? d : null;
