@@ -10,23 +10,70 @@ using TaleWorlds.Library;
 
 namespace CampaignAILab.Tracking
 {
+    /* =========================================================
+     * DECISION LIFECYCLE
+     *
+     * Registered   → Decision observed & logged
+     * Executing    → Decision currently active on map
+     * Completed    → Intent fulfilled (not quality)
+     * Aborted      → Decision stopped without replacement
+     * Overridden   → Superseded by another decision
+     * Invalidated  → Became impossible (party destroyed, etc)
+     * ========================================================= */
+
+    internal enum DecisionStatus
+    {
+        Registered,
+        Executing,
+        Completed,
+        Aborted,
+        Overridden,
+        Invalidated
+    }
+
+    internal sealed class DecisionRegistryEntry
+    {
+        public DecisionRecord Decision;
+        public DecisionStatus Status;
+    }
+
     /// <summary>
     /// Infers AI decisions by observing persistent, external party commitments.
     /// One active decision per party at any given time.
     /// </summary>
     public static class DecisionTracker
     {
+        /* =========================================================
+         * REGISTRY ACCESS
+         * ========================================================= */
+
+        private static readonly Dictionary<string, DecisionRegistryEntry> ActiveDecisions
+            = new Dictionary<string, DecisionRegistryEntry>();
+
+        private static readonly Dictionary<string, PartyObservation> LastObservations
+            = new Dictionary<string, PartyObservation>();
+
+        internal static DecisionRegistryEntry GetRegistryEntry(string partyId)
+            => ActiveDecisions.TryGetValue(partyId, out var e) ? e : null;
+
+        internal static IEnumerable<string> GetAllActivePartyIds()
+            => new List<string>(ActiveDecisions.Keys);
+
         public static IEnumerable<DecisionRecord> GetAllActive()
         {
-            return ActiveDecisions.Values;
+            foreach (var e in ActiveDecisions.Values)
+                yield return e.Decision;
         }
 
-        private static readonly Dictionary<string, DecisionRecord> ActiveDecisions = new Dictionary<string, DecisionRecord>();
+        public static DecisionRecord GetActive(string partyId)
+            => ActiveDecisions.TryGetValue(partyId, out var e) ? e.Decision : null;
 
-        private static readonly Dictionary<string, PartyObservation> LastObservations = new Dictionary<string, PartyObservation>();
+        /* =========================================================
+         * ENTRY POINT
+         * ========================================================= */
 
         /// <summary>
-        /// Entry point called from CampaignEvents.DailyTickPartyEvent
+        /// Called from CampaignEvents.DailyTickPartyEvent
         /// </summary>
         public static void OnDailyPartyTick(MobileParty party)
         {
@@ -34,7 +81,6 @@ namespace CampaignAILab.Tracking
                 return;
 
             var partyId = party.StringId;
-
             var current = PartyObservation.Capture(party);
 
             if (!LastObservations.TryGetValue(partyId, out var previous))
@@ -43,37 +89,51 @@ namespace CampaignAILab.Tracking
                 return;
             }
 
-            // Infer a new decision if a commitment-level change occurred
-            var inferredDecision = InferDecision(previous, current, party);
-            if (inferredDecision != null)
+            // 1️⃣ Infer new decision
+            var inferred = InferDecision(previous, current, party);
+            if (inferred != null)
             {
-                AbortDecisionIfExists(party);
+                SupersedeDecisionIfExists(party, inferred);
 
-                inferredDecision.IsLogged = true;
-                ActiveDecisions[partyId] = inferredDecision;
+                var entry = new DecisionRegistryEntry
+                {
+                    Decision = inferred,
+                    Status = DecisionStatus.Registered
+                };
 
-                AsyncLogger.EnqueueDecision(inferredDecision);
+                ActiveDecisions[partyId] = entry;
+                AsyncLogger.EnqueueDecision(inferred);
             }
 
+            // 2️⃣ Registered → Executing happens on first observed tick
+            if (ActiveDecisions.TryGetValue(partyId, out var active) &&
+                active.Status == DecisionStatus.Registered)
+            {
+                active.Status = DecisionStatus.Executing;
+            }
 
             LastObservations[partyId] = current;
         }
 
-        /// <summary>
-        /// Detects meaningful intent commitment changes.
-        /// </summary>
+        /* =========================================================
+         * DECISION INFERENCE
+         * ========================================================= */
+
         private static DecisionRecord InferDecision(
             PartyObservation prev,
             PartyObservation curr,
             MobileParty party)
         {
-            // 1️⃣ Army join / leave
+            // Army join
             if (!prev.InArmy && curr.InArmy && party.Army != null)
             {
-                return CreateDecision(party, "JoinArmy", party.Army.LeaderParty?.StringId);
+                return CreateDecision(
+                    party,
+                    "JoinArmy",
+                    party.Army.LeaderParty?.StringId);
             }
 
-            // 2️⃣ Movement target change (strong commitment)
+            // Movement commitment
             if (prev.TargetSettlementId != curr.TargetSettlementId &&
                 curr.TargetSettlementId != null)
             {
@@ -83,7 +143,7 @@ namespace CampaignAILab.Tracking
                     curr.TargetSettlementId);
             }
 
-            // 3️⃣ Hostile proximity → raid intent inference
+            // Raid intent inference
             if (curr.NearHostileVillage && !prev.NearHostileVillage)
             {
                 return CreateDecision(
@@ -92,7 +152,7 @@ namespace CampaignAILab.Tracking
                     curr.NearHostileVillageId);
             }
 
-            // 4️⃣ Entered settlement → defend / resupply
+            // Settlement entry
             if (!prev.InSettlement && curr.InSettlement)
             {
                 return CreateDecision(
@@ -121,37 +181,67 @@ namespace CampaignAILab.Tracking
             };
         }
 
+        /* =========================================================
+         * LIFECYCLE MANAGEMENT
+         * ========================================================= */
+
         /// <summary>
-        /// Abort current decision if party switches intent.
+        /// Supersedes an active decision when a new intent is observed.
+        /// This is NOT an abort — intent was replaced.
         /// </summary>
-        public static void AbortDecisionIfExists(MobileParty party)
+        private static void SupersedeDecisionIfExists(MobileParty party, DecisionRecord newDecision)
         {
-            if (!ActiveDecisions.TryGetValue(party.StringId, out var decision))
+            if (!ActiveDecisions.TryGetValue(party.StringId, out var entry))
                 return;
 
-            if (decision.IsLogged)
-            {
-                float durationHours =
-                    (float)(CampaignTime.Now.ToHours - decision.Timestamp.ToHours);
+            if (entry.Status != DecisionStatus.Registered &&
+                entry.Status != DecisionStatus.Executing)
+                return;
 
-                AsyncLogger.EnqueueOutcome(new OutcomeRecord
-                {
-                    DecisionId = decision.DecisionId,
-                    OutcomeType = "Aborted",
-                    ResolutionTime = CampaignTime.Now,
-                    DurationHours = durationHours
-                });
-            }
+            float durationHours =
+                (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
+
+            entry.Status = DecisionStatus.Overridden;
+
+            AsyncLogger.EnqueueOutcome(new OutcomeRecord
+            {
+                DecisionId = entry.Decision.DecisionId,
+                OutcomeType = "Overridden",
+                ResolutionTime = CampaignTime.Now,
+                DurationHours = durationHours,
+
+                // NEW — causal link
+                OverriddenByDecisionType = newDecision.DecisionType
+            });
+
 
             ActiveDecisions.Remove(party.StringId);
         }
 
-
-        public static DecisionRecord GetActive(string partyId)
-            => ActiveDecisions.TryGetValue(partyId, out var d) ? d : null;
-
+        /// <summary>
+        /// Finalizes a decision already in a terminal state.
+        /// </summary>
         public static void Resolve(string partyId)
-            => ActiveDecisions.Remove(partyId);
+        {
+            if (!ActiveDecisions.TryGetValue(partyId, out var entry))
+                return;
+
+            if (entry.Status == DecisionStatus.Registered ||
+                entry.Status == DecisionStatus.Executing)
+            {
+                // This should NEVER happen
+                AsyncLogger.EnqueueOutcome(new OutcomeRecord
+                {
+                    DecisionId = entry.Decision.DecisionId,
+                    OutcomeType = "Invalidated",
+                    ResolutionTime = CampaignTime.Now,
+                    Notes = "ForcedResolveWithoutTerminalState"
+                });
+            }
+
+            ActiveDecisions.Remove(partyId);
+        }
+
 
         private static bool IsValidParty(MobileParty party)
         {
@@ -162,11 +252,11 @@ namespace CampaignAILab.Tracking
         }
     }
 
-    /// <summary>
-    /// Minimal snapshot to detect commitment changes between ticks.
-    /// NOT logged.
-    /// </summary>
-    internal class PartyObservation
+    /* =========================================================
+     * PARTY OBSERVATION SNAPSHOT
+     * ========================================================= */
+
+    internal sealed class PartyObservation
     {
         public bool InArmy;
         public string TargetSettlementId;
@@ -185,14 +275,11 @@ namespace CampaignAILab.Tracking
                 CurrentSettlementId = party.CurrentSettlement?.StringId
             };
 
-            // Detect hostile village proximity (raid intent inference)
-            // Replace all usages of .Position2D with .GetPosition2D for both MobileParty and Settlement
-            // In PartyObservation.Capture(MobileParty party):
-
             foreach (Village village in Village.All)
             {
                 if (village.MapFaction != party.MapFaction &&
-                    party.GetPosition2D.DistanceSquared(village.Settlement.GetPosition2D) < 400f)
+                    party.GetPosition2D.DistanceSquared(
+                        village.Settlement.GetPosition2D) < 400f)
                 {
                     obs.NearHostileVillage = true;
                     obs.NearHostileVillageId = village.StringId;

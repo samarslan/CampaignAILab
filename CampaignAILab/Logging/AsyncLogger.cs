@@ -153,7 +153,7 @@ namespace CampaignAILab.Logging
 
         private static string SerializeOutcome(OutcomeRecord o)
         {
-            var sb = new StringBuilder(256);
+            var sb = new StringBuilder(320);
             sb.Append('{');
 
             Append(sb, "decisionId", o.DecisionId);
@@ -168,12 +168,32 @@ namespace CampaignAILab.Logging
             sb.Append("\"goldChange\":").Append(o.GoldChange).Append(',');
             sb.Append("\"moraleChange\":").Append(o.MoraleChange).Append(',');
 
-            sb.Append("\"targetCaptured\":").Append(o.TargetCaptured.ToString().ToLowerInvariant()).Append(',');
-            sb.Append("\"partyDestroyed\":").Append(o.PartyDestroyed.ToString().ToLowerInvariant());
+            sb.Append("\"targetCaptured\":")
+              .Append(o.TargetCaptured.ToString().ToLowerInvariant()).Append(',');
+
+            sb.Append("\"partyDestroyed\":")
+              .Append(o.PartyDestroyed.ToString().ToLowerInvariant());
+
+            // OPTIONAL FIELDS (append-only, schema-safe)
+
+            if (!string.IsNullOrEmpty(o.OverriddenByDecisionType))
+            {
+                sb.Append(',');
+                Append(sb, "overriddenByDecisionType", o.OverriddenByDecisionType);
+                sb.Length--; // remove trailing comma from Append()
+            }
+
+            if (!string.IsNullOrEmpty(o.Notes))
+            {
+                sb.Append(',');
+                Append(sb, "notes", o.Notes);
+                sb.Length--; // remove trailing comma from Append()
+            }
 
             sb.Append('}');
             return sb.ToString();
         }
+
 
         private static void AppendContext(StringBuilder sb, DecisionContextSnapshot c)
         {

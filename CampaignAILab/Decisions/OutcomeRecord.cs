@@ -2,7 +2,7 @@
 
 namespace CampaignAILab.Decisions
 {
-    public class OutcomeRecord
+    public sealed class OutcomeRecord
     {
         public string DecisionId;
         public string OutcomeType;
@@ -11,9 +11,12 @@ namespace CampaignAILab.Decisions
 
         public int TroopsLost;
         public int GoldChange;
-        public int MoraleChange;
+        public float MoraleChange;
 
         public bool TargetCaptured;
         public bool PartyDestroyed;
+
+        public string OverriddenByDecisionType;
+        public string Notes;
     }
 }

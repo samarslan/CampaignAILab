@@ -1,4 +1,4 @@
-﻿using CampaignAILab.Decisions;
+using CampaignAILab.Decisions;
 using CampaignAILab.Logging;
 using CampaignAILab.Tracking;
 using TaleWorlds.CampaignSystem;
@@ -19,17 +19,21 @@ namespace CampaignAILab.Resolution
             if (party == null)
                 return;
 
-            var decision = DecisionTracker.GetActive(party.StringId);
-            if (decision == null || decision.DecisionType != "JoinArmy")
+            var entry = DecisionTracker.GetRegistryEntry(party.StringId);
+            if (entry == null ||
+                entry.Status != DecisionStatus.Executing ||
+                entry.Decision.DecisionType != "JoinArmy")
                 return;
 
+            entry.Status = DecisionStatus.Completed;
+
             float durationHours =
-                (float)(CampaignTime.Now.ToHours - decision.Timestamp.ToHours);
+                (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
 
             AsyncLogger.EnqueueOutcome(new OutcomeRecord
             {
-                DecisionId = decision.DecisionId,
-                OutcomeType = "Success",
+                DecisionId = entry.Decision.DecisionId,
+                OutcomeType = "Completed",
                 ResolutionTime = CampaignTime.Now,
                 DurationHours = durationHours
             });
@@ -42,16 +46,20 @@ namespace CampaignAILab.Resolution
             if (party == null)
                 return;
 
-            var decision = DecisionTracker.GetActive(party.StringId);
-            if (decision == null || decision.DecisionType != "JoinArmy")
+            var entry = DecisionTracker.GetRegistryEntry(party.StringId);
+            if (entry == null ||
+                entry.Status != DecisionStatus.Executing ||
+                entry.Decision.DecisionType != "JoinArmy")
                 return;
 
+            entry.Status = DecisionStatus.Aborted;
+
             float durationHours =
-                (float)(CampaignTime.Now.ToHours - decision.Timestamp.ToHours);
+                (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
 
             AsyncLogger.EnqueueOutcome(new OutcomeRecord
             {
-                DecisionId = decision.DecisionId,
+                DecisionId = entry.Decision.DecisionId,
                 OutcomeType = "Aborted",
                 ResolutionTime = CampaignTime.Now,
                 DurationHours = durationHours
@@ -69,26 +77,29 @@ namespace CampaignAILab.Resolution
             if (village == null)
                 return;
 
-            foreach (var decision in DecisionTracker.GetAllActive())
+            foreach (var partyId in DecisionTracker.GetAllActivePartyIds())
             {
-                if (decision.DecisionType != "RaidVillage")
+                var entry = DecisionTracker.GetRegistryEntry(partyId);
+                if (entry == null ||
+                    entry.Status != DecisionStatus.Executing ||
+                    entry.Decision.DecisionType != "RaidVillage" ||
+                    entry.Decision.TargetId != village.StringId)
                     continue;
 
-                if (decision.TargetId != village.StringId)
-                    continue;
+                entry.Status = DecisionStatus.Completed;
 
                 float durationHours =
-                    (float)(CampaignTime.Now.ToHours - decision.Timestamp.ToHours);
+                    (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
 
                 AsyncLogger.EnqueueOutcome(new OutcomeRecord
                 {
-                    DecisionId = decision.DecisionId,
-                    OutcomeType = "Success",
+                    DecisionId = entry.Decision.DecisionId,
+                    OutcomeType = "Completed",
                     ResolutionTime = CampaignTime.Now,
                     DurationHours = durationHours
                 });
 
-                DecisionTracker.Resolve(decision.PartyId);
+                DecisionTracker.Resolve(partyId);
             }
         }
 
@@ -105,17 +116,21 @@ namespace CampaignAILab.Resolution
             if (raider == null)
                 return;
 
-            var decision = DecisionTracker.GetActive(raider.StringId);
-            if (decision == null || decision.DecisionType != "RaidVillage")
+            var entry = DecisionTracker.GetRegistryEntry(raider.StringId);
+            if (entry == null ||
+                entry.Status != DecisionStatus.Executing ||
+                entry.Decision.DecisionType != "RaidVillage")
                 return;
 
+            entry.Status = DecisionStatus.Invalidated;
+
             float durationHours =
-                (float)(CampaignTime.Now.ToHours - decision.Timestamp.ToHours);
+                (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
 
             AsyncLogger.EnqueueOutcome(new OutcomeRecord
             {
-                DecisionId = decision.DecisionId,
-                OutcomeType = "Failure",
+                DecisionId = entry.Decision.DecisionId,
+                OutcomeType = "Invalidated",
                 ResolutionTime = CampaignTime.Now,
                 DurationHours = durationHours
             });
@@ -133,17 +148,20 @@ namespace CampaignAILab.Resolution
             if (mobileParty == null)
                 return;
 
-            var decision = DecisionTracker.GetActive(mobileParty.StringId);
-            if (decision == null)
+            var entry = DecisionTracker.GetRegistryEntry(mobileParty.StringId);
+            if (entry == null ||
+                entry.Status != DecisionStatus.Executing)
                 return;
 
+            entry.Status = DecisionStatus.Invalidated;
+
             float durationHours =
-                (float)(CampaignTime.Now.ToHours - decision.Timestamp.ToHours);
+                (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
 
             AsyncLogger.EnqueueOutcome(new OutcomeRecord
             {
-                DecisionId = decision.DecisionId,
-                OutcomeType = "Failure",
+                DecisionId = entry.Decision.DecisionId,
+                OutcomeType = "Invalidated",
                 PartyDestroyed = true,
                 ResolutionTime = CampaignTime.Now,
                 DurationHours = durationHours

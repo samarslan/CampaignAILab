@@ -90,9 +90,9 @@
     <Compile Include="Decisions\OutcomeRecord.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Logging\AsyncLogger.cs" />
+    <Compile Include="Resolution\OutcomeResolver.cs" />
     <Compile Include="SubModule.cs" />
     <Compile Include="Tracking\DecisionTracker.cs" />
-    <Compile Include="Resolution\OutcomeResolver.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
