@@ -1,6 +1,4 @@
-using CampaignAILab.Decisions;
-using CampaignAILab.Logging;
-using CampaignAILab.Tracking;
+﻿using CampaignAILab.Tracking;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.MapEvents;
 using TaleWorlds.CampaignSystem.Party;
@@ -25,20 +23,11 @@ namespace CampaignAILab.Resolution
                 entry.Decision.DecisionType != "JoinArmy")
                 return;
 
-            entry.Status = DecisionStatus.Completed;
-
-            float durationHours =
-                (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
-
-            AsyncLogger.EnqueueOutcome(new OutcomeRecord
-            {
-                DecisionId = entry.Decision.DecisionId,
-                OutcomeType = "Completed",
-                ResolutionTime = CampaignTime.Now,
-                DurationHours = durationHours
-            });
-
-            DecisionTracker.Resolve(party.StringId);
+            // ✅ Delegates lifecycle + logging to DecisionTracker
+            DecisionTracker.MarkCompleted(
+                party.StringId,
+                "JoinedArmy"
+            );
         }
 
         public static void OnPartyLeftArmy(MobileParty party)
@@ -52,20 +41,10 @@ namespace CampaignAILab.Resolution
                 entry.Decision.DecisionType != "JoinArmy")
                 return;
 
-            entry.Status = DecisionStatus.Aborted;
-
-            float durationHours =
-                (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
-
-            AsyncLogger.EnqueueOutcome(new OutcomeRecord
-            {
-                DecisionId = entry.Decision.DecisionId,
-                OutcomeType = "Aborted",
-                ResolutionTime = CampaignTime.Now,
-                DurationHours = durationHours
-            });
-
-            DecisionTracker.Resolve(party.StringId);
+            DecisionTracker.MarkAborted(
+                party.StringId,
+                "LeftArmy"
+            );
         }
 
         /* =========================================================
@@ -86,20 +65,10 @@ namespace CampaignAILab.Resolution
                     entry.Decision.TargetId != village.StringId)
                     continue;
 
-                entry.Status = DecisionStatus.Completed;
-
-                float durationHours =
-                    (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
-
-                AsyncLogger.EnqueueOutcome(new OutcomeRecord
-                {
-                    DecisionId = entry.Decision.DecisionId,
-                    OutcomeType = "Completed",
-                    ResolutionTime = CampaignTime.Now,
-                    DurationHours = durationHours
-                });
-
-                DecisionTracker.Resolve(partyId);
+                DecisionTracker.MarkCompleted(
+                    partyId,
+                    "VillageLooted"
+                );
             }
         }
 
@@ -122,20 +91,10 @@ namespace CampaignAILab.Resolution
                 entry.Decision.DecisionType != "RaidVillage")
                 return;
 
-            entry.Status = DecisionStatus.Invalidated;
-
-            float durationHours =
-                (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
-
-            AsyncLogger.EnqueueOutcome(new OutcomeRecord
-            {
-                DecisionId = entry.Decision.DecisionId,
-                OutcomeType = "Invalidated",
-                ResolutionTime = CampaignTime.Now,
-                DurationHours = durationHours
-            });
-
-            DecisionTracker.Resolve(raider.StringId);
+            DecisionTracker.MarkInvalidated(
+                raider.StringId,
+                "RaidEndedWithoutLoot"
+            );
         }
 
         /* =========================================================
@@ -153,21 +112,10 @@ namespace CampaignAILab.Resolution
                 entry.Status != DecisionStatus.Executing)
                 return;
 
-            entry.Status = DecisionStatus.Invalidated;
-
-            float durationHours =
-                (float)(CampaignTime.Now.ToHours - entry.Decision.Timestamp.ToHours);
-
-            AsyncLogger.EnqueueOutcome(new OutcomeRecord
-            {
-                DecisionId = entry.Decision.DecisionId,
-                OutcomeType = "Invalidated",
-                PartyDestroyed = true,
-                ResolutionTime = CampaignTime.Now,
-                DurationHours = durationHours
-            });
-
-            DecisionTracker.Resolve(mobileParty.StringId);
+            DecisionTracker.MarkInvalidated(
+                mobileParty.StringId,
+                "PartyDestroyed"
+            );
         }
     }
 }
