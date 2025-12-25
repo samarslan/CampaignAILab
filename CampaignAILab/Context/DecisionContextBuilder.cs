@@ -2,6 +2,7 @@
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.Party;
+using static TaleWorlds.CampaignSystem.CharacterDevelopment.DefaultPerks;
 
 namespace CampaignAILab.Context
 {
@@ -10,6 +11,7 @@ namespace CampaignAILab.Context
         public static DecisionContextSnapshot Build(MobileParty party)
         {
             var leader = party.LeaderHero;
+            var now = CampaignTime.Now;
 
             return new DecisionContextSnapshot
             {
@@ -23,7 +25,14 @@ namespace CampaignAILab.Context
                 Morale = (int)party.Morale,
                 PartyType = ResolvePartyType(party),
                 IsMainParty = party.IsMainParty,
-                PartyAgeDays = -1,
+                PartyAgeDays = -1, // placeholder
+
+                CampaignDay = (int)now.ToDays,
+
+                // Season derived ONLY from day-of-year to avoid precision leakage
+                CampaignSeason = ((int)(now.ToDays % 120)) / 30,
+
+                TimeOfDayBucket = ResolveTimeOfDayBucket(now),
 
                 /* ----------------------------
                  * HERO STATE
@@ -108,6 +117,19 @@ namespace CampaignAILab.Context
                 return "BanditParty";
 
             return "Other";
+        }
+
+        private static byte ResolveTimeOfDayBucket(CampaignTime now)
+        {
+            // Use ToHours ONLY for coarse bucketing
+            var hour = (int)(now.ToHours % 24);
+
+            if (hour >= 6 && hour < 10)
+                return 0; // Morning
+            if (hour >= 10 && hour < 18)
+                return 1; // Day
+
+            return 2; // Night
         }
     }
 }

@@ -23,6 +23,15 @@
         public float DistanceToNearestFriendlySettlement;
         public float DistanceToNearestEnemySettlement;
 
+        // Absolute campaign day (bias/drift control)
+        public int CampaignDay;
+
+        // Coarse season index (0..3)
+        public int CampaignSeason;
+
+        // 0=Morning, 1=Day, 2=Night
+        public byte TimeOfDayBucket;
+
         public bool IsAtWar;
         public int ActiveWarCount;
 
