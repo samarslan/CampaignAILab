@@ -5,6 +5,14 @@
         public int TroopCount;
         public int TierSum;
 
+        public string PartyType;
+        public bool IsMainParty;
+
+        // Structural control – currently unavailable from engine API
+        // Semantics:
+        //  -1 = party age not observable in this build1.1
+        public int PartyAgeDays;
+
         public int NearbyEnemyCount;
         public int NearbyAllyCount;
 

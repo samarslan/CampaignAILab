@@ -21,6 +21,9 @@ namespace CampaignAILab.Context
 
                 Food = (int)party.Food,
                 Morale = (int)party.Morale,
+                PartyType = ResolvePartyType(party),
+                IsMainParty = party.IsMainParty,
+                PartyAgeDays = -1,
 
                 /* ----------------------------
                  * HERO STATE
@@ -92,6 +95,19 @@ namespace CampaignAILab.Context
             }
 
             return count;
+        }
+        private static string ResolvePartyType(MobileParty party)
+        {
+            if (party.IsMainParty)
+                return "MainParty";
+
+            if (party.LeaderHero != null)
+                return "LordParty";
+
+            if (party.IsBandit)
+                return "BanditParty";
+
+            return "Other";
         }
     }
 }
