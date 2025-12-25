@@ -1,4 +1,4 @@
-﻿namespace CampaignAILab.Decisions
+namespace CampaignAILab.Decisions
 {
     public class DecisionContextSnapshot
     {
@@ -8,7 +8,7 @@
         public string PartyType;
         public bool IsMainParty;
 
-        // Structural control – currently unavailable from engine API
+        // Structural control � currently unavailable from engine API
         // Semantics:
         //  -1 = party age not observable in this build1.1
         public int PartyAgeDays;
@@ -56,5 +56,16 @@
         public int Gold;
         public int Food;
         public int Morale;
+
+        // === Negative / null controls (1.4) ===
+        // Schema-level controls for offline validation
+        public int ContextSchemaVersion;
+        public int ContextFieldCount;
+
+        // Cosmetic/string control
+        public int PartyIdStringLength;
+
+        // Deterministic pseudo-random null control
+        public int NullDeterministicHash;
     }
 }

@@ -16,7 +16,7 @@ namespace CampaignAILab.Context
             var leader = party.LeaderHero;
             var now = CampaignTime.Now;
 
-            return new DecisionContextSnapshot
+            var snapshot = new DecisionContextSnapshot
             {
                 /* ----------------------------
                  * PARTY STATE
@@ -32,24 +32,18 @@ namespace CampaignAILab.Context
 
                 CampaignDay = (int)now.ToDays,
 
-                // Season derived ONLY from day-of-year to avoid precision leakage
                 CampaignSeason = ((int)(now.ToDays % 120)) / 30,
-
                 TimeOfDayBucket = ResolveTimeOfDayBucket(now),
 
                 PartySpeed = party.Speed,
-
                 IsAtSettlementAtDecision = party.CurrentSettlement != null,
-
                 TargetDistanceStraightLine = ResolveTargetDistance(party, targetSettlement),
-
 
                 /* ----------------------------
                  * HERO STATE
                  * ---------------------------- */
                 Gold = leader?.Gold ?? 0,
 
-                // Personality traits (mapped)
                 Aggression = GetTrait(leader, DefaultTraits.Valor),
                 Caution = GetTrait(leader, DefaultTraits.Calculating),
                 Honor = GetTrait(leader, DefaultTraits.Honor),
@@ -59,8 +53,24 @@ namespace CampaignAILab.Context
                  * WAR CONTEXT
                  * ---------------------------- */
                 IsAtWar = IsFactionAtWar(party),
-                ActiveWarCount = CountActiveWars(party)
+                ActiveWarCount = CountActiveWars(party),
+
+                /* ----------------------------
+                 * NEGATIVE / NULL CONTROLS (1.4)
+                 * ---------------------------- */
+                ContextSchemaVersion = 4,
+
+                PartyIdStringLength = party.StringId?.Length ?? 0,
+
+                NullDeterministicHash =
+                ((party.StringId?.GetHashCode() ?? 0) ^ (int)now.ToDays) & 0x7fffffff
             };
+
+            // populate last; reflection allowed for schema integrity checks
+            snapshot.ContextFieldCount =
+                typeof(DecisionContextSnapshot).GetFields().Length;
+
+            return snapshot;
         }
 
         /* =========================================================
