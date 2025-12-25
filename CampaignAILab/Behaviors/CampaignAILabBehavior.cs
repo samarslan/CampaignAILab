@@ -27,6 +27,9 @@ namespace CampaignAILab.Behaviors
             CampaignEvents.DailyTickPartyEvent
                 .AddNonSerializedListener(this, OnDailyFlushTick);
 
+            CampaignEvents.DailyTickPartyEvent
+                .AddNonSerializedListener(this, Resolution.OutcomeResolver.OnDailyPartySettlementCheck);
+
             // Army lifecycle
             CampaignEvents.OnPartyJoinedArmyEvent
                 .AddNonSerializedListener(this, Resolution.OutcomeResolver.OnPartyJoinedArmy);
@@ -46,7 +49,6 @@ namespace CampaignAILab.Behaviors
             CampaignEvents.OnPartyRemovedEvent
                 .AddNonSerializedListener(this, Resolution.OutcomeResolver.OnPartyRemoved);
         }
-
         public override void SyncData(IDataStore dataStore) { }
     }
 }

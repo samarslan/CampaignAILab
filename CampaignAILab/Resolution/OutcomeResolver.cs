@@ -117,5 +117,26 @@ namespace CampaignAILab.Resolution
                 "PartyDestroyed"
             );
         }
+
+        public static void OnDailyPartySettlementCheck(MobileParty party)
+        {
+            if (party?.CurrentSettlement == null)
+                return;
+
+            var entry = DecisionTracker.GetRegistryEntry(party.StringId);
+            if (entry == null ||
+                entry.Status != DecisionStatus.Executing ||
+                entry.Decision.DecisionType != "MoveToSettlement")
+                return;
+
+            if (party.CurrentSettlement.StringId != entry.Decision.TargetId)
+                return;
+
+            DecisionTracker.MarkCompleted(
+                party.StringId,
+                "EnteredSettlement"
+            );
+        }
+
     }
 }
