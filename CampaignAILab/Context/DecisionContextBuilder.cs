@@ -2,13 +2,16 @@
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.CampaignSystem.Settlements;
+using TaleWorlds.Library;
 using static TaleWorlds.CampaignSystem.CharacterDevelopment.DefaultPerks;
 
 namespace CampaignAILab.Context
 {
     public static class DecisionContextBuilder
     {
-        public static DecisionContextSnapshot Build(MobileParty party)
+        public static DecisionContextSnapshot Build(MobileParty party, Settlement targetSettlement)
+
         {
             var leader = party.LeaderHero;
             var now = CampaignTime.Now;
@@ -33,6 +36,13 @@ namespace CampaignAILab.Context
                 CampaignSeason = ((int)(now.ToDays % 120)) / 30,
 
                 TimeOfDayBucket = ResolveTimeOfDayBucket(now),
+
+                PartySpeed = party.Speed,
+
+                IsAtSettlementAtDecision = party.CurrentSettlement != null,
+
+                TargetDistanceStraightLine = ResolveTargetDistance(party, targetSettlement),
+
 
                 /* ----------------------------
                  * HERO STATE
@@ -131,5 +141,19 @@ namespace CampaignAILab.Context
 
             return 2; // Night
         }
+
+        private static float ResolveTargetDistance(
+            MobileParty party,
+            Settlement target)
+        {
+            if (party == null || target == null)
+                return -1f;
+
+            Vec2 partyPos = party.GetPosition2D;
+            Vec2 targetPos = target.GetPosition2D;
+
+            return partyPos.Distance(targetPos);
+        }
+
     }
 }

@@ -19,9 +19,22 @@
         public float NearbyEnemyStrength;
         public float NearbyAllyStrength;
 
+        // DistanceToTarget is legacy / unused in Phase-2
         public float DistanceToTarget;
+
         public float DistanceToNearestFriendlySettlement;
         public float DistanceToNearestEnemySettlement;
+
+
+        // Instantaneous party speed at decision time
+        public float PartySpeed;
+
+        // True if party is already inside a settlement
+        public bool IsAtSettlementAtDecision;
+
+        // Straight-line distance to target at decision time
+        // -1 if no target
+        public float TargetDistanceStraightLine;
 
         // Absolute campaign day (bias/drift control)
         public int CampaignDay;
