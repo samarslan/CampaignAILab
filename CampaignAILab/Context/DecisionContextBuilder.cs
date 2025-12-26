@@ -1,4 +1,5 @@
 ﻿using CampaignAILab.Decisions;
+using CampaignAILab.Util;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.CharacterDevelopment;
 using TaleWorlds.CampaignSystem.Party;
@@ -63,9 +64,39 @@ namespace CampaignAILab.Context
                 PartyIdStringLength = party.StringId?.Length ?? 0,
 
                 NullDeterministicHash =
-                ((party.StringId?.GetHashCode() ?? 0) ^ (int)now.ToDays) & 0x7fffffff
+                ((party.StringId?.GetHashCode() ?? 0) ^ (int)now.ToDays) & 0x7fffffff,
+
+                /* ----------------------------
+                * MANDATORY METADATA (1.5)
+                * ---------------------------- */
+                CampaignAILabAssemblyVersion =
+                    VersionProbe.GetCampaignAILabVersion(),
+
+                GameVersionString =
+                    VersionProbe.GetNativeGameVersion()
             };
 
+            /* ============================
+             * 1.4 TARGET CONTEXT (ANCHOR)
+             * ============================ */
+
+            if (targetSettlement != null)
+            {
+                snapshot.TargetSettlementType =
+                    ResolveSettlementType(targetSettlement);
+
+                snapshot.TargetFactionId =
+                    targetSettlement.MapFaction?.StringId;
+
+                snapshot.TargetIsFriendly =
+                    targetSettlement.MapFaction == party.MapFaction;
+            }
+            else
+            {
+                snapshot.TargetSettlementType = 0;
+                snapshot.TargetFactionId = null;
+                snapshot.TargetIsFriendly = false;
+            }
             // populate last; reflection allowed for schema integrity checks
             snapshot.ContextFieldCount =
                 typeof(DecisionContextSnapshot).GetFields().Length;
@@ -164,6 +195,21 @@ namespace CampaignAILab.Context
 
             return partyPos.Distance(targetPos);
         }
+        private static byte ResolveSettlementType(Settlement settlement)
+        {
+            if (settlement.IsTown)
+                return 1;
 
+            if (settlement.IsCastle)
+                return 2;
+
+            if (settlement.IsVillage)
+                return 3;
+
+            if (settlement.IsHideout)
+                return 4;
+            
+            return 0;
+        }
     }
 }

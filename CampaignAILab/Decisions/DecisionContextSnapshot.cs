@@ -32,9 +32,18 @@ namespace CampaignAILab.Decisions
         // True if party is already inside a settlement
         public bool IsAtSettlementAtDecision;
 
+        /* =========================================================
+         * MOVE TARGET CONTEXT (1.4)
+         * Populated ONLY when TargetId != null
+        * ========================================================= */
+
         // Straight-line distance to target at decision time
         // -1 if no target
         public float TargetDistanceStraightLine;
+        // === Target Context (1.4) ===
+        public byte TargetSettlementType; // 0=None, 1=Town, 2=Castle, 3=Village, 4=Hideout
+        public string TargetFactionId;
+        public bool TargetIsFriendly;
 
         // Absolute campaign day (bias/drift control)
         public int CampaignDay;
@@ -57,6 +66,12 @@ namespace CampaignAILab.Decisions
         public int Food;
         public int Morale;
 
+        /* =========================================================
+        * MANDATORY METADATA (1.5)
+        * ========================================================= */
+        public string CampaignAILabAssemblyVersion;
+        public string GameVersionString;
+
         // === Negative / null controls (1.4) ===
         // Schema-level controls for offline validation
         public int ContextSchemaVersion;
@@ -67,5 +82,6 @@ namespace CampaignAILab.Decisions
 
         // Deterministic pseudo-random null control
         public int NullDeterministicHash;
+
     }
 }
