@@ -3,6 +3,8 @@ namespace CampaignAILab.Decisions
     public class DecisionContextSnapshot
     {
         public int TroopCount;
+
+        //place holder for future use
         public int TierSum;
 
         public string PartyType;
