@@ -205,23 +205,76 @@ namespace CampaignAILab.Logging
 
             sb.Append('{');
 
+            // ---------------------------------------------------------
+            // Structural party controls
+            // ---------------------------------------------------------
             AppendNumber(sb, "troopCount", c.TroopCount);
-            AppendNumber(sb, "tierSum", c.TierSum);
+            Append(sb, "partyType", c.PartyType);
+            AppendNumber(sb, "isMainParty", c.IsMainParty ? 1 : 0);
+            AppendNumber(sb, "partyAgeDays", c.PartyAgeDays);
 
+            // ---------------------------------------------------------
+            // Temporal controls
+            // ---------------------------------------------------------
+            AppendNumber(sb, "campaignDay", c.CampaignDay);
+            AppendNumber(sb, "campaignSeason", c.CampaignSeason);
+            AppendNumber(sb, "timeOfDayBucket", c.TimeOfDayBucket);
+
+            // ---------------------------------------------------------
+            // Kinematic / geometry
+            // ---------------------------------------------------------
+            AppendNumber(sb, "partySpeed", c.PartySpeed);
+            AppendNumber(sb, "targetDistanceStraightLine", c.TargetDistanceStraightLine);
+
+            // ---------------------------------------------------------
+            // Target context (nullable-safe)
+            // ---------------------------------------------------------
+            AppendNumber(sb, "targetSettlementType", c.TargetSettlementType);
+            Append(sb, "targetFactionId", c.TargetFactionId);
+            AppendNumber(sb, "targetIsFriendly", c.TargetIsFriendly ? 1 : 0);
+
+            // ---------------------------------------------------------
+            // Negative / null controls
+            // ---------------------------------------------------------
+            AppendNumber(sb, "partyIdStringLength", c.PartyIdStringLength);
+            AppendNumber(sb, "nullDeterministicHash", c.NullDeterministicHash);
+            AppendNumber(sb, "contextFieldCount", c.ContextFieldCount);
+
+            // ---------------------------------------------------------
+            // War / strategic state
+            // ---------------------------------------------------------
             AppendNumber(sb, "isAtWar", c.IsAtWar ? 1 : 0);
             AppendNumber(sb, "activeWarCount", c.ActiveWarCount);
 
+            // ---------------------------------------------------------
+            // Resources
+            // ---------------------------------------------------------
+            AppendNumber(sb, "gold", c.Gold);
+            AppendNumber(sb, "food", c.Food);
+            AppendNumber(sb, "morale", c.Morale);
+
+            // ---------------------------------------------------------
+            // Personality traits (raw)
+            // ---------------------------------------------------------
             AppendNumber(sb, "aggression", c.Aggression);
             AppendNumber(sb, "caution", c.Caution);
             AppendNumber(sb, "honor", c.Honor);
             AppendNumber(sb, "generosity", c.Generosity);
 
-            AppendNumber(sb, "gold", c.Gold);
-            AppendNumber(sb, "food", c.Food);
-            AppendNumber(sb, "morale", c.Morale, isLast: true);
+            // ---------------------------------------------------------
+            // Mandatory metadata (comparability)
+            // ---------------------------------------------------------
+            AppendNumber(sb, "contextSchemaVersion", c.ContextSchemaVersion);
+            Append(sb, "campaignAILabAssemblyVersion", c.CampaignAILabAssemblyVersion);
+            Append(sb, "gameVersionString", c.GameVersionString);
+
+            // Remove trailing comma safely
+            if (sb[sb.Length - 1] == ',')
+                sb.Length--;
 
             sb.Append('}');
         }
+
 
         /* =========================================================
          * JSON HELPERS
