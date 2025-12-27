@@ -3,6 +3,10 @@
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
   </Configurations>
+  <Project Path="CampaignAILab Log Validator/CampaignAILab Log Validator.pyproj" Type="888888a0-9f3d-457c-b088-3a5042f75d52" Id="54dfc346-de50-4344-a643-c98f9960d2c2">
+    <Platform Project="AnyCPU" />
+    <Build Project="false" />
+  </Project>
   <Project Path="CampaignAILab/CampaignAILab.csproj" Id="573f2123-f7e7-4e33-9e32-a496e19e8445">
     <Platform Solution="*|x64" Project="x64" />
   </Project>
